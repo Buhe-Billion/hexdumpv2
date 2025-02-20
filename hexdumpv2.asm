@@ -177,4 +177,16 @@ SECTION .text         ;Section containing code
                     POP RAX
 
                     RET
-                      
+
+global _start
+
+_start:
+        MOV RBP,RSP
+
+        XOR R15,R15
+        XOR RSI,RSI
+        XOR RCX,RCX
+        CALL LOADBUFF
+        CMP R15,0
+        JBE EXIT
+         
