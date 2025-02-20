@@ -133,4 +133,28 @@ SECTION .text         ;Section containing code
                     POP RDI
                     POP RDX
                     RET
+
+            PRINTLINE:
+                    PUSH RAX
+                    PUSH RBX
+                    PUSH RCX
+                    PUSH RDX
+                    PUSH RSI
+                    PUSH RDI
+
+                    MOV RAX,SYS_WRITE_CALL_VAL
+                    MOV RDI,STDOUT_FD
+                    MOV RSI,DUMPLINE
+                    MOV RDX,FULLLEN
+                    SYSCALL
+
+                    POP RDI
+                    POP RSI
+                    POP RDX
+                    POP RCX
+                    POP RBX
+                    POP RAX
+
+                    RET
+
                     
