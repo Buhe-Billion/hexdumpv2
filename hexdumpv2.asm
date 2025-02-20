@@ -157,4 +157,24 @@ SECTION .text         ;Section containing code
 
                     RET
 
-                    
+             LOADBUFF:
+                    PUSH RAX
+                    PUSH RDX
+                    PUSH RSI
+                    PUSH RDI
+
+                    MOV RAX,SYS_READ_CALL_VAL
+                    MOV RDI,STDIN_FD
+                    MOV RSI,BUFF
+                    MOV RDX,BUFFLEN
+                    SYSCALL
+                    MOV R15,RAX
+                    XOR RCX,RCX
+
+                    POP RDI
+                    POP RSI
+                    POP RDX
+                    POP RAX
+
+                    RET
+                      
