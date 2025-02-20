@@ -98,3 +98,39 @@ SECTION .text         ;Section containing code
                     POP RAX
 
                     RET                     ;This procedure is done. returns to caller
+
+;‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐
+; DUMPCHAR:"Poke" a value into the hex dump line string.
+;
+; IN:Pass the 8‐­bit value to be poked in RAX.
+;  Pass the value's position in the line (0‐­15) in RDX
+; RETURNS: Nothing
+; MODIFIES: RAX, ASCLine, DumpLine
+; CALLS: Nothing
+; DESCRIPTION: The value passed in RAX will be put in both the hex dump
+;  portion and in the ASCII portion, at the position passed
+;  in RDX, represented by a space where it is not a printable character.
+
+           DUMPCHAR:
+                    PUSH RBX            ;Save caller's RBX
+                    PUSH RDI            ;Save caller's RDI
+
+                    MOV BL,[DOTXLAT+RAX]
+                    MOV [ASCLINE+RDX+1],BL
+
+                    MOV RBX,RAX
+                    LEA RDI,[RDX*2+RDX]
+
+                    AND RAX,000000000000000Fh
+                    MOV AL,[HEXDIGITS+RAX]
+                    MOV [DUMPLINE+RDI+2],AL
+
+                    AND RBX,00000000000000F0h
+                    SHR RBX,4
+                    MOV BL,[HEXDIGITS+RBX]
+                    MOV [DUMPLINE+RDI+1],BL
+
+                    POP RDI
+                    POP RDX
+                    RET
+                    
