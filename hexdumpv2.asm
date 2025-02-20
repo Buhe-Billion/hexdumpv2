@@ -66,4 +66,35 @@ SECTION .data             ;   Section containing initialised data
               DB 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
               DB 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
 
-              
+SECTION .text         ;Section containing code
+
+;‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐
+; CLEARLINE:
+; Clear a hex dump line string to 16 0 values;
+; IN:Nothing
+; RETURNS:Nothing
+; MODIFIES:Nothing
+; CALLS:DumpChar
+; DESCRIPTION: The hex dump line string is cleared to binary 0 by
+; calling DumpChar 16 times, passing it 0 each time.
+
+         CLEARLINE:
+                    PUSH RAX            ;SAVE ALL CALLERS R*X registers
+                    PUSH RBX
+                    PUSH RCX
+                    PUSH RDX
+
+                    MOV RDX,15           ;Going to 16 pokes, counting from 0
+
+         .POKE:
+                    MOV RAX,0             ;Tell DUMPCHAR to poke a '0'
+                    CALL DUMPCHAR         ;Insert '0' into the hex dump string
+                    SUB RDX,1             ;DEC doesn't affect CF! Hence sub is used
+                    JAE .POKE             ;If RDX >= 0, Loopback
+
+                    POP RDX               ;Restore caller's R*X registers
+                    POP RCX
+                    POP RBX
+                    POP RAX
+
+                    RET                     ;This procedure is done. returns to caller
