@@ -35,6 +35,8 @@ SECTION .data             ;   Section containing initialised data
         SYS_READ_CALL_VAL  EQU 0
         STDIN_FD           EQU 0
         STDOUT_FD          EQU 1
+        EXIT_SYSCALL       EQU 60
+        OK_RET_VAL         EQU 0
 
 ; The HEXDIGITS table is used to convert numeric values to their hex
 ; equivalents. Index by nybble without a scale: [HexDigits+eax]
@@ -189,4 +191,36 @@ _start:
         CALL LOADBUFF
         CMP R15,0
         JBE EXIT
-         
+
+        SCAN:
+             XOR RAX,RAX
+             MOV AL,[BUFF+RCX]
+             MOV RDX,RSI
+             AND RDX,000000000000000Fh
+             CALL DUMPCHAR
+
+             INC RSI
+             INC RCX
+             CMP RCX,R15
+             JB .MODTEST
+             CALL LOADBUFF
+             CMP R15,0
+             JBE DONE
+
+        .MODTEST:
+             TEST RSI,000000000000000Fh
+             JNZ SCAN
+             CALL PRINTLINE
+             CALL CLEARLINE
+             JMP SCAN
+
+         DONE:
+             CALL PRINTLINE
+
+         EXIT:
+             MOV RSP,RBP
+             POP RBP
+
+             MOV RAX,EXIT_SYSCALL	;EXIT THE PROGRAM
+             MOV RDI,OK_RET_VAL	;RETURN VALUE
+             SYSCALL		;SERVUS UND BIS DANN
