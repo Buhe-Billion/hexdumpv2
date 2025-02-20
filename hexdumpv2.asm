@@ -170,6 +170,7 @@ SECTION .text         ;Section containing code
                     MOV RSI,BUFF
                     MOV RDX,BUFFLEN
                     SYSCALL
+
                     MOV R15,RAX
                     XOR RCX,RCX
 
@@ -224,3 +225,7 @@ _start:
              MOV RAX,EXIT_SYSCALL	;EXIT THE PROGRAM
              MOV RDI,OK_RET_VAL	;RETURN VALUE
              SYSCALL		;SERVUS UND BIS DANN
+;Ok, this programm only prints out one line of text.
+;Atleast it assembles and runs, so thats a victory for now.
+;Next we have to fix that error and add comments
+;
