@@ -165,6 +165,11 @@ SECTION .text         ;Section containing code
                     MOV RAX,SYS_WRITE_CALL_VAL     ;Specify sys_write call
                     MOV RDI,STDOUT_FD              ;Specify standard output
                     MOV RSI,DUMPLINE               ;Pass addy of line string
+
+;Line below ensures that we print ASCLINE as well.
+;We can substitute DUMPLINE AND ASCLINE AND FULLLEN AND ASCLEN
+;to select for the parts we may selectively want to print
+
                     MOV RDX,FULLLEN                ;Pass size of the line string
                     SYSCALL                        ;Ask the Linux kernel to display our string
 
@@ -253,6 +258,8 @@ _start:
              CALL LOADBUFF              ; ...go fill the buffer again.
              CMP R15,0                  ; R15 equ 0 when EOF is reached by sys_read
              JBE DONE                   ;If we get EOF, then we're done
+
+;.MODTEST controls the loop, ensuring that we don't exceed 16 bytes
 
         .MODTEST:
              TEST RSI,0000000000000000Fh   ;Test 4 lowest bits in counter for 0
