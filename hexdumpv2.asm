@@ -146,7 +146,7 @@ SECTION .text         ;Section containing code
 
 ;‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐
 ; PrintLine: Displays DumpLine to stdout
-; INPUT: DUMPLINE, FULLEN
+; INPUT: DUMPLINE, FULLLEN
 ; RETURNS: Nothing
 ; MODIFIES: Nothing
 ; CALLS: Kernel sys_write
@@ -272,7 +272,12 @@ _start:
              MOV RAX,EXIT_SYSCALL	;EXIT THE PROGRAM
              MOV RDI,OK_RET_VAL	;RETURN VALUE
              SYSCALL		;SERVUS UND BIS DANN
-;Ok, this programm only prints out one line of text.
-;Atleast it assembles and runs, so thats a victory for now.
-;Next we have to fix that error and add comments
-;
+
+
+;INVICTUS!!!!!!
+;This programm now runs correctly!
+;The error in the previous version was
+;due to a stack misalignment: In DUMPCHAR we were errenously
+;popping  RBX's value into RDX. Thereby causing the programm
+;to print only the first line of the stdin
+;and get caught in an infinite loop!
