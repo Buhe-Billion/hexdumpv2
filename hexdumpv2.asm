@@ -39,7 +39,7 @@ SECTION .data             ;   Section containing initialised data
         OK_RET_VAL         EQU 0
 
 ; The HEXDIGITS table is used to convert numeric values to their hex
-; equivalents. Index by nybble without a scale: [HexDigits+eax]
+; equivalents. Index by nybble without a scale: [HexDigits+rax]
 
         HEXDIGITS:         DB "0123456789ABCDEF"
 
@@ -73,7 +73,7 @@ SECTION .text         ;Section containing code
 ;‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐
 ; CLEARLINE:
 ; Clear a hex dump line string to 16 0 values;
-; IN:Nothing
+; INPUT:Nothing
 ; RETURNS:Nothing
 ; MODIFIES:Nothing
 ; CALLS:DumpChar
@@ -99,15 +99,15 @@ SECTION .text         ;Section containing code
                     POP RBX
                     POP RAX
 
-                    RET                     ;This procedure is done. returns to caller
+                    RET                    ;This procedure is done. returns to caller
 
 ;‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐
 ; DUMPCHAR:"Poke" a value into the hex dump line string.
 ;
-; IN:Pass the 8‐­bit value to be poked in RAX.
+; INPUT:Pass the 8‐­bit value to be poked in RAX.
 ;  Pass the value's position in the line (0‐­15) in RDX
 ; RETURNS: Nothing
-; MODIFIES: RAX, ASCLine, DumpLine
+; MODIFIES: RAX, ASCLINE, DUMPLINE
 ; CALLS: Nothing
 ; DESCRIPTION: The value passed in RAX will be put in both the hex dump
 ;  portion and in the ASCII portion, at the position passed
@@ -117,106 +117,153 @@ SECTION .text         ;Section containing code
                     PUSH RBX            ;Save caller's RBX
                     PUSH RDI            ;Save caller's RDI
 
-                    MOV BL,[DOTXLAT+RAX]
-                    MOV [ASCLINE+RDX+1],BL
+;First we insert the input char into the ASCII part of the dump line
 
-                    MOV RBX,RAX
-                    LEA RDI,[RDX*2+RDX]
+                    MOV BL,[DOTXLAT+RAX]            ;Translate non printables to '.'
+                    MOV [ASCLINE+RDX+1],BL          ;Write to the ASCII portion zuerst
 
-                    AND RAX,000000000000000Fh
-                    MOV AL,[HEXDIGITS+RAX]
-                    MOV [DUMPLINE+RDI+2],AL
+;Next we insert the hex equivalent of the input char in the hex
+;part of the hex dump line.
 
-                    AND RBX,00000000000000F0h
-                    SHR RBX,4
-                    MOV BL,[HEXDIGITS+RBX]
-                    MOV [DUMPLINE+RDI+1],BL
+                    MOV RBX,RAX                     ;Save a 2nd copy of the input char
+                    LEA RDI,[RDX*2+RDX]             ;Calculate the offset into line string (RDX*3)
 
-                    POP RDI
-                    POP RDX
-                    RET
+;Look up low nybble character and insert it into the string:
+
+                    AND RAX,000000000000000Fh        ;Mask out all but the low nybble
+                    MOV AL,[HEXDIGITS+RAX]           ;Lookup the char equivalent of the nybble
+                    MOV [DUMPLINE+RDI+2],AL          ;and write it to line string
+
+                    AND RBX,00000000000000F0h        ;Mask out all but the 2nd lowest nybble
+                    SHR RBX,4                        ;Shift the just previously filtered high nybble to lower nybble
+                    MOV BL,[HEXDIGITS+RBX]           ;Lookup the char equivalent of the nybble
+                    MOV [DUMPLINE+RDI+1],BL          ;and write it to line string
+
+;Job's done. On to the caller with RET
+                    POP RDI                           ;!!!Restore registers in LIFO structure
+                    POP RBX                           ;Otherwise we will have a misaligned stack
+                    RET                               ;Return to caller
+
+;‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐
+; PrintLine: Displays DumpLine to stdout
+; INPUT: DUMPLINE, FULLEN
+; RETURNS: Nothing
+; MODIFIES: Nothing
+; CALLS: Kernel sys_write
+; DESCRIPTION: The hex dump line string DumpLine is displayed to
+;stdout using syscall function sys_write. Registers
+;used are preserved.
 
             PRINTLINE:
-                    PUSH RAX
-                    PUSH RBX
-                    PUSH RCX
-                    PUSH RDX
+                    PUSH RAX                      ;Back in x86-32 there existed the PUSHAD
+                    PUSH RBX                      ; instruction that pushed multiple registers
+                    PUSH RCX                      ;to the stack at once. Sadly, this instruction has
+                    PUSH RDX                      ; been depreciated for x64!
                     PUSH RSI
                     PUSH RDI
 
-                    MOV RAX,SYS_WRITE_CALL_VAL
-                    MOV RDI,STDOUT_FD
-                    MOV RSI,DUMPLINE
-                    MOV RDX,FULLLEN
-                    SYSCALL
+                    MOV RAX,SYS_WRITE_CALL_VAL     ;Specify sys_write call
+                    MOV RDI,STDOUT_FD              ;Specify standard output
+                    MOV RSI,DUMPLINE               ;Pass addy of line string
+                    MOV RDX,FULLLEN                ;Pass size of the line string
+                    SYSCALL                        ;Ask the Linux kernel to display our string
 
-                    POP RDI
-                    POP RSI
-                    POP RDX
-                    POP RCX
+                    POP RDI                         ;POPAD just like with PUSHAD handled multiple
+                    POP RSI                         ;registers at once. POPAD would pop multiple
+                    POP RDX                         ;registers out of the stack. But, just like PUSHAD
+                    POP RCX                         ;,POPAD is not supported by x64! Schade!
                     POP RBX
                     POP RAX
 
-                    RET
+                    RET                             ; Return to calling location
+
+
+;‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐­‐
+; LoadBuff:Fills a buffer with data from stdin via syscall sys_read
+; INPUT: Nothing
+; RETURNS: # of bytes read in R15
+; MODIFIES: RCX, R15, Buff
+; CALLS: syscall sys_read
+; DESCRIPTION: Loads a buffer full of data (BUFFLEN bytes) from stdin
+; using syscall sys_read and places it in Buff. Buffer
+; offset counter RCX is zeroed, because we're starting in
+;on a new buffer full of data. Caller must test value in
+;R15: If R15 contains 0 on return, we've hit EOF on stdin.
+;< 0 in R15 on return indicates some kind of error.
 
              LOADBUFF:
-                    PUSH RAX
-                    PUSH RDX
+                    PUSH RAX                    ;Save callers registers RAX,RDX,RSI and RDI
+                    PUSH RDX                    ;onto the stack.
                     PUSH RSI
                     PUSH RDI
 
-                    MOV RAX,SYS_READ_CALL_VAL
-                    MOV RDI,STDIN_FD
-                    MOV RSI,BUFF
-                    MOV RDX,BUFFLEN
-                    SYSCALL
+                    MOV RAX,SYS_READ_CALL_VAL    ;Specify sys_read call
+                    MOV RDI,STDIN_FD             ;Specify stdin
+                    MOV RSI,BUFF                 ;Pass offset of the buffer to read *to*
+                    MOV RDX,BUFFLEN              ;Pass tthe number of bytes to read at one pass
+                    SYSCALL                      ;Ask the kernel to sys_read to fill the buffer
 
-                    MOV R15,RAX
-                    XOR RCX,RCX
+;sys_read maintains a position on the input file/buffer of where it last was?!So it doesnt
+;begin @ the beginning each time!?!
 
-                    POP RDI
-                    POP RSI
+                    MOV R15,RAX                   ;Save the number of bytes read
+                    XOR RCX,RCX                   ;Clear out the buffer pointer
+
+                    POP RDI                       ;Restore callers registers RAX,RDX,RSI and RDI
+                    POP RSI                       ;from the stack.
                     POP RDX
                     POP RAX
 
-                    RET
+                    RET                           ;Return to calling location
+
+
+; The main program lies here below
+;
+
 
 global _start
 
 _start:
-        MOV RBP,RSP
+        MOV RBP,RSP                     ;for debugging
 
-        XOR R15,R15
+;Whatever initialisation needs doing before loop scan starts here
+
+        XOR R15,R15                     ;zero out R15,RSI,& RCX
         XOR RSI,RSI
         XOR RCX,RCX
-        CALL LOADBUFF
-        CMP R15,0
+        CALL LOADBUFF                   ;Read first buffer of data from stdin
+        CMP R15,0                       ;If R15 = 0, sys_read reached EOF in stdin
         JBE EXIT
 
-        SCAN:
-             XOR RAX,RAX
-             MOV AL,[BUFF+RCX]
-             MOV RDX,RSI
-             AND RDX,000000000000000Fh
-             CALL DUMPCHAR
+;Go through the buffer and convert binary byte values to hex digits
 
-             INC RSI
-             INC RCX
-             CMP RCX,R15
-             JB .MODTEST
-             CALL LOADBUFF
-             CMP R15,0
-             JBE DONE
+        SCAN:
+             XOR RAX,RAX                ;Clear RAX to 0
+             MOV AL,[BUFF+RCX]          ;Get a byte from the buffer into AL
+             MOV RDX,RSI                ;Copy total counter into RDX
+             AND RDX,000000000000000Fh  ;Mask out lowest 4 bits of char counter
+             CALL DUMPCHAR              ;Call the char poke procedure
+
+;Bump the buffer pointer to the next char and see if the buffer's done
+
+             INC RSI                    ;Increment total chars processed counter
+             INC RCX                    ;Increment buffer pointer
+             CMP RCX,R15                ;Compare with number of chars in buffer
+             JB .MODTEST                ;If we've processed all chars in buffer...
+             CALL LOADBUFF              ; ...go fill the buffer again.
+             CMP R15,0                  ; R15 equ 0 when EOF is reached by sys_read
+             JBE DONE                   ;If we get EOF, then we're done
 
         .MODTEST:
-             TEST RSI,000000000000000Fh
-             JNZ SCAN
-             CALL PRINTLINE
-             CALL CLEARLINE
-             JMP SCAN
+             TEST RSI,0000000000000000Fh   ;Test 4 lowest bits in counter for 0
+             JNZ SCAN                     ;If the counter is *not* mod 16, loop back
+             CALL PRINTLINE               ;...otherwise print the line
+             CALL CLEARLINE               ;Clear hex dump line to 0's
+             NOP
+             JMP SCAN                     ;Continue scanning the buffer
 
          DONE:
-             CALL PRINTLINE
+             CALL PRINTLINE               ;Print the final leftovers line
 
          EXIT:
              MOV RSP,RBP
