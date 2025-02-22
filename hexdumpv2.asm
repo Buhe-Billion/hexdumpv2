@@ -37,6 +37,7 @@ SECTION .data             ;   Section containing initialised data
         STDOUT_FD          EQU 1
         EXIT_SYSCALL       EQU 60
         OK_RET_VAL         EQU 0
+        EOF_VAL						 EQU 0
 
 ; The HEXDIGITS table is used to convert numeric values to their hex
 ; equivalents. Index by nybble without a scale: [HexDigits+rax]
@@ -237,7 +238,7 @@ _start:
         XOR RSI,RSI
         XOR RCX,RCX
         CALL LOADBUFF                   ;Read first buffer of data from stdin
-        CMP R15,0                       ;If R15 = 0, sys_read reached EOF in stdin
+        CMP R15,EOF_VAL                 ;If R15 = 0, sys_read reached EOF in stdin
         JBE EXIT
 
 ;Go through the buffer and convert binary byte values to hex digits
@@ -256,7 +257,7 @@ _start:
              CMP RCX,R15                ;Compare with number of chars in buffer
              JB .MODTEST                ;If we've processed all chars in buffer...
              CALL LOADBUFF              ; ...go fill the buffer again.
-             CMP R15,0                  ; R15 equ 0 when EOF is reached by sys_read
+             CMP R15,EOF_VAL            ; R15 equ 0 when EOF is reached by sys_read
              JBE DONE                   ;If we get EOF, then we're done
 
 ;.MODTEST controls the loop, ensuring that we don't exceed 16 bytes
