@@ -242,7 +242,11 @@ _start:
         XOR RCX,RCX
         CALL LOADBUFF                   ;Read first buffer of data from stdin
         CMP R15,EOF_VAL                 ;If R15 = 0, sys_read reached EOF in stdin
-        JBE EXIT
+        JBE NEAR EXIT
+
+;NEAR  wasn't necessary here. I just wanted to experiment
+;Short jump opcodes are always 2 Bytes
+;Near jump opcodes are either four or six bytes
 
 ;Go through the buffer and convert binary byte values to hex digits
 
@@ -261,17 +265,19 @@ _start:
              JB .MODTEST                ;If we've processed all chars in buffer...
              CALL LOADBUFF              ; ...go fill the buffer again.
              CMP R15,EOF_VAL            ; R15 equ 0 when EOF is reached by sys_read
-             JBE DONE                   ;If we get EOF, then we're done
+             JBE NEAR DONE              ;If we get EOF, then we're done
+;Again, NEAR is not necessary here yet. Just a demo.
 
 ;.MODTEST controls the loop, ensuring that we don't exceed 16 bytes
 
         .MODTEST:
              TEST RSI,0000000000000000Fh   ;Test 4 lowest bits in counter for 0
-             JNZ SCAN                     ;If the counter is *not* mod 16, loop back
-             CALL PRINTLINE               ;...otherwise print the line
-             CALL CLEARLINE               ;Clear hex dump line to 0's
+             JNZ NEAR SCAN                 ;If the counter is *not* mod 16, loop back
+             CALL PRINTLINE                ;...otherwise print the line
+             CALL CLEARLINE                ;Clear hex dump line to 0's
              NOP
              JMP SCAN                     ;Continue scanning the buffer
+;Can't apply NEAR to an unconditional jump intsruxn
 
          DONE:
              CALL PRINTLINE               ;Print the final leftovers line
