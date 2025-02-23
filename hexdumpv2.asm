@@ -215,6 +215,9 @@ SECTION .text         ;Section containing code
                     MOV R15,RAX                   ;Save the number of bytes read
                     XOR RCX,RCX                   ;Clear out the buffer pointer
 
+;SYSCALL stores the return address in RCX
+;and stores RFLAGS in R11
+
                     POP RDI                       ;Restore callers registers RAX,RDX,RSI and RDI
                     POP RSI                       ;from the stack.
                     POP RDX
